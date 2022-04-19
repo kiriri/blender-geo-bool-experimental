@@ -9718,6 +9718,26 @@ static void def_geo_curve_primitive_line(StructRNA *srna)
   RNA_def_property_update(prop, NC_NODE | NA_EDITED, "rna_Node_socket_update");
 }
 
+static void def_geo_curve_bool(StructRNA *srna)
+{
+  static const EnumPropertyItem curve_bool_items[] =
+  {
+    {0, "OR", 0, "Union", "Any area that is either in A or B."},
+    {1, "AND", 0, "Intersection", "Any area that is both in A and B."},
+    {2, "SUB", 0, "Difference", "Any area that is in A but not in B."},
+    {0, NULL, 0, NULL, NULL},
+  };
+
+  PropertyRNA *prop;
+
+  prop = RNA_def_property(srna, "operation", PROP_ENUM, PROP_NONE);
+  RNA_def_property_enum_sdna(prop, NULL, "custom2");
+  RNA_def_property_enum_items(prop, curve_bool_items);
+  RNA_def_property_enum_default(prop, 0);
+  RNA_def_property_ui_text(prop, "Operation", "");
+  RNA_def_property_update(prop, NC_NODE | NA_EDITED, "rna_Node_update");
+}
+
 static void def_fn_rotate_euler(StructRNA *srna)
 {
   static const EnumPropertyItem type_items[] = {

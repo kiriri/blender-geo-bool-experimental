@@ -77,6 +77,7 @@ def curve_node_items(context):
     yield NodeItem("GeometryNodeFilletCurve")
     yield NodeItem("GeometryNodeResampleCurve")
     yield NodeItem("GeometryNodeReverseCurve")
+    yield NodeItem("GeometryNodeCurveBool")
     yield NodeItem("GeometryNodeSampleCurve")
     yield NodeItem("GeometryNodeSubdivideCurve")
     yield NodeItem("GeometryNodeTrimCurve")
