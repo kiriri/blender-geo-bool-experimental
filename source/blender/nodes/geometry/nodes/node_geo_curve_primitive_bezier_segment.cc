@@ -110,7 +110,7 @@ static void node_geo_exec(GeoNodeExecParams params)
   params.set_output("Curve", GeometrySet::create_with_curves(curves));
 }
 
-}  // namespace blender::nodes::node_geo_curve_primitive_bezier_segment_cc
+} // namespace blender::nodes::node_geo_curve_primitive_bezier_segment_cc
 
 void register_node_type_geo_curve_primitive_bezier_segment()
 {
