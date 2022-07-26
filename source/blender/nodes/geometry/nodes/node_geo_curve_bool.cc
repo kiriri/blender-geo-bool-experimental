@@ -31,14 +31,6 @@ namespace bg = boost::geometry;
 namespace bgi = boost::geometry::index;
 
 /**
- * - clone original data.
- * - get curves as indices/offsets list.
- * - calculate intersections. Use list iterator, so insert() can add it right after. Add data to
- * end of cloned data, with full interpolation.
- * - trace.
- */
-
-/**
  * Same ids as "curve_bool_items" in NOD_static_types.h
  */
 typedef enum BoolOperationType {
@@ -75,7 +67,7 @@ namespace blender::nodes {
 
 /**
  * \warning Copied from subdivide_curves.cc
- * In theory this should copy the curves, but all I get is an exception down the line.
+ * In theory this should copy the curves, but all I get is an error (outside this node's logic)
  */
 static Curves *create_result_curves(const bke::CurvesGeometry &src_curves)
 {
@@ -95,6 +87,19 @@ static Curves *create_result_curves(const bke::CurvesGeometry &src_curves)
 }
 
 /**
+ * @brief A doubly linked list representation of a curve.
+ * Will contain extra information about intersection in the future.
+ */
+struct CurvePoint {
+  // Real evaluated position on the original curve.
+  float3 position;
+  // Next point along the original curve.
+  CurvePoint *next = nullptr;
+  // Previous point along the original curve.
+  CurvePoint *prev = nullptr;
+};
+
+/**
  * Generate one or more new curves from 2 existing sets of curves.
  * These curves must not self intersect.
  * The general idea is to follow one of the curves and copy the control points until an
@@ -106,28 +111,11 @@ static Curves* generate_boolean_shapes(GeometrySet &primary_geometry_set,
                                                        BoolOperationType type,
                                                        int resolution)
 {
-
   const CurveComponent &primary_component =
       *primary_geometry_set.get_component_for_read<CurveComponent>();
   const Curves &_primary_curves = *primary_component.get_for_read();
   bke::CurvesGeometry primary_curves = bke::CurvesGeometry::wrap(_primary_curves.geometry);
   const int primary_curve_count = primary_curves.curve_num;
-
-  // const CurveComponent &secondary_component =
-  //     *secondary_geometry_set.get_component_for_read<CurveComponent>();
-  // const Curves &_secondary_curves = *secondary_component.get_for_read();
-  // bke::CurvesGeometry secondary_curves = bke::CurvesGeometry::wrap(_secondary_curves.geometry);
-  // const int secondary_curve_count = secondary_curves.curve_num;
-
-  // std::vector<int> results = {};
-
-  // // TODO : Walk along all curves in A, put the offsets in array. Then turn array into valid output
-  // for (const int i_curve : primary_curves.curves_range()) {
-  //   const IndexRange curve_index_range =  primary_curves.points_for_curve(i_curve);
-  //   for (const int i_point : curve_index_range) {
-  //     results.push_back(i_point);
-  //   }
-  // }
 
   return create_result_curves(primary_curves);
 }
@@ -154,12 +142,11 @@ static void geo_node_curve_bool_exec(GeoNodeExecParams params)
   const bNode &node = params.node();
   const BoolOperationType data_type = static_cast<BoolOperationType>(node.custom2);
 
-  int real_count = 0;
   // Repeat the bool operation for each element in the `Curves` input.
+  int real_count = 0;
   Curves *primary_curves = geometry_set_a.get_curves_for_write();
   std::unique_ptr<Curves> result_curves;
   for (GeometrySet &set_group : geometry_sets) {
-    // const CurveComponent* curve_in = set_group.get_component_for_read<CurveComponent>();
     if (set_group.has_curves()) {
       primary_curves = generate_boolean_shapes(geometry_set_a, set_group, data_type, resolution);
 
@@ -195,7 +182,7 @@ static void geo_node_curve_bool_declare(NodeDeclarationBuilder &b)
 }
 
 /**
- * This function is needed to draw the enum dropdown of operations.
+ * This function is needed to draw the enum operations dropdown.
  */
 static void geo_node_curve_bool_layout(uiLayout *layout, bContext *UNUSED(C), PointerRNA *ptr)
 {
