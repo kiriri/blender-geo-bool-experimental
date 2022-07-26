@@ -323,6 +323,7 @@ GVArraySpan::GVArraySpan(GVArraySpan &&other)
   else {
     data_ = owned_data_;
   }
+  other.owned_data_ = nullptr;
   other.data_ = nullptr;
   other.size_ = 0;
 }
@@ -393,6 +394,7 @@ GMutableVArraySpan::GMutableVArraySpan(GMutableVArraySpan &&other)
   else {
     data_ = owned_data_;
   }
+  other.owned_data_ = nullptr;
   other.data_ = nullptr;
   other.size_ = 0;
 }
@@ -402,7 +404,7 @@ GMutableVArraySpan::~GMutableVArraySpan()
   if (varray_) {
     if (show_not_saved_warning_) {
       if (!save_has_been_called_) {
-        std::cout << "Warning: Call `apply()` to make sure that changes persist in all cases.\n";
+        std::cout << "Warning: Call `save()` to make sure that changes persist in all cases.\n";
       }
     }
   }

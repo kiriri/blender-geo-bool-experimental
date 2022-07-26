@@ -12,26 +12,6 @@
 namespace blender::geometry {
 
 /**
- * \warning Only the curve domain of the input is copied, so the result is invalid!
- */
-static Curves *create_result_curves(const bke::CurvesGeometry &src_curves)
-{
-  Curves *dst_curves_id = bke::curves_new_nomain(0, src_curves.curves_num());
-  bke::CurvesGeometry &dst_curves = bke::CurvesGeometry::wrap(dst_curves_id->geometry);
-  CurveComponent dst_component;
-  dst_component.replace(dst_curves_id, GeometryOwnershipType::Editable);
-  /* Directly copy curve attributes, since they stay the same. */
-  CustomData_copy(&src_curves.curve_data,
-                  &dst_curves.curve_data,
-                  CD_MASK_ALL,
-                  CD_DUPLICATE,
-                  src_curves.curves_num());
-  dst_curves.runtime->type_counts = src_curves.runtime->type_counts;
-
-  return dst_curves_id;
-}
-
-/**
  * Return a range used to retrieve values from an array of values stored per point, but with an
  * extra element at the end of each curve. This is useful for offsets within curves, where it is
  * convenient to store the first 0 and have the last offset be the total result curve size.
@@ -76,39 +56,6 @@ static void calculate_result_offsets(const bke::CurvesGeometry &src_curves,
   bke::curves::accumulate_counts_to_offsets(dst_curve_offsets);
 }
 
-struct AttributeTransferData {
-  /* Expect that if an attribute exists, it is stored as a contiguous array internally anyway. */
-  GVArraySpan src;
-  bke::OutputAttribute dst;
-};
-
-static Vector<AttributeTransferData> retrieve_point_attributes(const CurveComponent &src_component,
-                                                               CurveComponent &dst_component,
-                                                               const Set<std::string> &skip = {})
-{
-  Vector<AttributeTransferData> attributes;
-  src_component.attribute_foreach(
-      [&](const bke::AttributeIDRef &id, const AttributeMetaData meta_data) {
-        if (meta_data.domain != ATTR_DOMAIN_POINT) {
-          /* Curve domain attributes are all copied directly to the result in one step. */
-          return true;
-        }
-        if (id.is_named() && skip.contains(id.name())) {
-          return true;
-        }
-
-        GVArray src = src_component.attribute_try_get_for_read(id, ATTR_DOMAIN_POINT);
-        BLI_assert(src);
-        bke::OutputAttribute dst = dst_component.attribute_try_get_for_output_only(
-            id, ATTR_DOMAIN_POINT, meta_data.data_type);
-        BLI_assert(dst);
-        attributes.append({std::move(src), std::move(dst)});
-
-        return true;
-      });
-  return attributes;
-}
-
 template<typename T>
 static inline void linear_interpolation(const T &a, const T &b, MutableSpan<T> dst)
 {
@@ -144,7 +91,8 @@ static void subdivide_attribute_linear(const bke::CurvesGeometry &src_curves,
         }
       });
 
-      const IndexRange dst_last_segment = bke::offsets_to_range(offsets, src_points.size() - 1);
+      const IndexRange dst_last_segment = dst_points.slice(
+          bke::offsets_to_range(offsets, src_points.size() - 1));
       linear_interpolation(curve_src.last(), curve_src.first(), dst.slice(dst_last_segment));
     }
   });
@@ -341,10 +289,9 @@ static void subdivide_bezier_positions(const Span<float3> src_positions,
       cyclic, dst_types_l, dst_types_r, dst_positions, dst_handles_l, dst_handles_r);
 }
 
-Curves *subdivide_curves(const CurveComponent &src_component,
-                         const bke::CurvesGeometry &src_curves,
-                         const IndexMask selection,
-                         const VArray<int> &cuts)
+bke::CurvesGeometry subdivide_curves(const bke::CurvesGeometry &src_curves,
+                                     const IndexMask selection,
+                                     const VArray<int> &cuts)
 {
   const Vector<IndexRange> unselected_ranges = selection.extract_ranges_invert(
       src_curves.curves_range());
@@ -352,10 +299,7 @@ Curves *subdivide_curves(const CurveComponent &src_component,
   /* Cyclic is accessed a lot, it's probably worth it to make sure it's a span. */
   const VArraySpan<bool> cyclic{src_curves.cyclic()};
 
-  Curves *dst_curves_id = create_result_curves(src_curves);
-  bke::CurvesGeometry &dst_curves = bke::CurvesGeometry::wrap(dst_curves_id->geometry);
-  CurveComponent dst_component;
-  dst_component.replace(dst_curves_id, GeometryOwnershipType::Editable);
+  bke::CurvesGeometry dst_curves = bke::curves::copy_only_curve_domain(src_curves);
 
   /* For each point, this contains the point offset in the corresponding result curve,
    * starting at zero. For example for two curves with four points each, the values might
@@ -384,28 +328,29 @@ Curves *subdivide_curves(const CurveComponent &src_component,
 
   dst_curves.resize(dst_curves.offsets().last(), dst_curves.curves_num());
 
+  const bke::AttributeAccessor src_attributes = src_curves.attributes();
+  bke::MutableAttributeAccessor dst_attributes = dst_curves.attributes_for_write();
+
   auto subdivide_catmull_rom = [&](IndexMask selection) {
-    for (auto &attribute : retrieve_point_attributes(src_component, dst_component)) {
+    for (auto &attribute : bke::retrieve_attributes_for_transfer(
+             src_attributes, dst_attributes, ATTR_DOMAIN_MASK_POINT)) {
       subdivide_attribute_catmull_rom(src_curves,
                                       dst_curves,
                                       selection,
                                       point_offsets,
                                       cyclic,
                                       attribute.src,
-                                      attribute.dst.as_span());
-      attribute.dst.save();
+                                      attribute.dst.span);
+      attribute.dst.finish();
     }
   };
 
   auto subdivide_poly = [&](IndexMask selection) {
-    for (auto &attribute : retrieve_point_attributes(src_component, dst_component)) {
-      subdivide_attribute_linear(src_curves,
-                                 dst_curves,
-                                 selection,
-                                 point_offsets,
-                                 attribute.src,
-                                 attribute.dst.as_span());
-      attribute.dst.save();
+    for (auto &attribute : bke::retrieve_attributes_for_transfer(
+             src_attributes, dst_attributes, ATTR_DOMAIN_MASK_POINT)) {
+      subdivide_attribute_linear(
+          src_curves, dst_curves, selection, point_offsets, attribute.src, attribute.dst.span);
+      attribute.dst.finish();
     }
   };
 
@@ -443,20 +388,17 @@ Curves *subdivide_curves(const CurveComponent &src_component,
       }
     });
 
-    for (auto &attribute : retrieve_point_attributes(src_component,
-                                                     dst_component,
-                                                     {"position",
-                                                      "handle_type_left",
-                                                      "handle_type_right",
-                                                      "handle_right",
-                                                      "handle_left"})) {
-      subdivide_attribute_linear(src_curves,
-                                 dst_curves,
-                                 selection,
-                                 point_offsets,
-                                 attribute.src,
-                                 attribute.dst.as_span());
-      attribute.dst.save();
+    for (auto &attribute : bke::retrieve_attributes_for_transfer(src_attributes,
+                                                                 dst_attributes,
+                                                                 ATTR_DOMAIN_MASK_POINT,
+                                                                 {"position",
+                                                                  "handle_type_left",
+                                                                  "handle_type_right",
+                                                                  "handle_right",
+                                                                  "handle_left"})) {
+      subdivide_attribute_linear(
+          src_curves, dst_curves, selection, point_offsets, attribute.src, attribute.dst.span);
+      attribute.dst.finish();
     }
   };
 
@@ -473,14 +415,15 @@ Curves *subdivide_curves(const CurveComponent &src_component,
                                      subdivide_nurbs);
 
   if (!unselected_ranges.is_empty()) {
-    for (auto &attribute : retrieve_point_attributes(src_component, dst_component)) {
+    for (auto &attribute : bke::retrieve_attributes_for_transfer(
+             src_attributes, dst_attributes, ATTR_DOMAIN_MASK_POINT)) {
       bke::curves::copy_point_data(
-          src_curves, dst_curves, unselected_ranges, attribute.src, attribute.dst.as_span());
-      attribute.dst.save();
+          src_curves, dst_curves, unselected_ranges, attribute.src, attribute.dst.span);
+      attribute.dst.finish();
     }
   }
 
-  return dst_curves_id;
+  return dst_curves;
 }
 
 }  // namespace blender::geometry

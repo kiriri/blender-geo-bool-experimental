@@ -85,8 +85,16 @@ struct Mesh *BKE_mesh_from_bmesh_for_eval_nomain(struct BMesh *bm,
  * Add original index (#CD_ORIGINDEX) layers if they don't already exist. This is meant to be used
  * when creating an evaluated mesh from an original edit mode mesh, to allow mapping from the
  * evaluated vertices to the originals.
+ *
+ * The mesh is expected to of a `ME_WRAPPER_TYPE_MDATA` wrapper type. This is asserted.
  */
 void BKE_mesh_ensure_default_orig_index_customdata(struct Mesh *mesh);
+
+/**
+ * Same as #BKE_mesh_ensure_default_orig_index_customdata but does not perform any checks: they
+ * must be done by the caller.
+ */
+void BKE_mesh_ensure_default_orig_index_customdata_no_check(struct Mesh *mesh);
 
 /**
  * Find the index of the loop in 'poly' which references vertex,
@@ -692,7 +700,8 @@ void BKE_mesh_calc_normals_split(struct Mesh *mesh);
  * to split geometry along sharp edges.
  */
 void BKE_mesh_calc_normals_split_ex(struct Mesh *mesh,
-                                    struct MLoopNorSpaceArray *r_lnors_spacearr);
+                                    struct MLoopNorSpaceArray *r_lnors_spacearr,
+                                    float (*r_corner_normals)[3]);
 
 /**
  * Higher level functions hiding most of the code needed around call to
@@ -985,7 +994,7 @@ void BKE_mesh_strip_loose_edges(struct Mesh *me);
 
 /**
  * If the mesh is from a very old blender version,
- * convert mface->edcode to edge drawflags
+ * convert #MFace.edcode to edge #ME_EDGEDRAW.
  */
 void BKE_mesh_calc_edges_legacy(struct Mesh *me, bool use_old);
 void BKE_mesh_calc_edges_loose(struct Mesh *mesh);
@@ -1001,8 +1010,8 @@ void BKE_mesh_calc_edges(struct Mesh *mesh, bool keep_existing_edges, bool selec
 void BKE_mesh_calc_edges_tessface(struct Mesh *mesh);
 
 /* In DerivedMesh.cc */
-void BKE_mesh_wrapper_deferred_finalize(struct Mesh *me_eval,
-                                        const struct CustomData_MeshMasks *cd_mask_finalize);
+void BKE_mesh_wrapper_deferred_finalize_mdata(struct Mesh *me_eval,
+                                              const struct CustomData_MeshMasks *cd_mask_finalize);
 
 /* **** Depsgraph evaluation **** */
 

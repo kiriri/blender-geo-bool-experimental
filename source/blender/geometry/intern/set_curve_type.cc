@@ -1,9 +1,9 @@
 /* SPDX-License-Identifier: GPL-2.0-or-later */
 
+#include "BKE_attribute.hh"
 #include "BKE_attribute_math.hh"
 #include "BKE_curves.hh"
 #include "BKE_curves_utils.hh"
-#include "BKE_geometry_set.hh"
 
 #include "BLI_task.hh"
 
@@ -290,71 +290,48 @@ struct GenericAttributes : NonCopyable, NonMovable {
   Vector<GSpan> src;
   Vector<GMutableSpan> dst;
 
-  Vector<bke::OutputAttribute> attributes;
+  Vector<bke::GSpanAttributeWriter> attributes;
 };
 
-static void retrieve_generic_point_attributes(const CurveComponent &src_component,
-                                              CurveComponent &dst_component,
+static void retrieve_generic_point_attributes(const bke::AttributeAccessor &src_attributes,
+                                              bke::MutableAttributeAccessor &dst_attributes,
                                               GenericAttributes &attributes)
 {
-  src_component.attribute_foreach(
-      [&](const bke::AttributeIDRef &id, const AttributeMetaData meta_data) {
+  src_attributes.for_all(
+      [&](const bke::AttributeIDRef &id, const bke::AttributeMetaData meta_data) {
         if (meta_data.domain != ATTR_DOMAIN_POINT) {
           /* Curve domain attributes are all copied directly to the result in one step. */
           return true;
         }
-        if (src_component.attribute_is_builtin(id)) {
+        if (src_attributes.is_builtin(id)) {
           if (!(id.is_named() && ELEM(id, "tilt", "radius"))) {
             return true;
           }
         }
 
-        GVArray src_attribute = src_component.attribute_try_get_for_read(id, ATTR_DOMAIN_POINT);
+        GVArray src_attribute = src_attributes.lookup(id, ATTR_DOMAIN_POINT);
         BLI_assert(src_attribute);
         attributes.src.append(src_attribute.get_internal_span());
 
-        bke::OutputAttribute dst_attribute = dst_component.attribute_try_get_for_output_only(
+        bke::GSpanAttributeWriter dst_attribute = dst_attributes.lookup_or_add_for_write_span(
             id, ATTR_DOMAIN_POINT, meta_data.data_type);
-        attributes.dst.append(dst_attribute.as_span());
+        attributes.dst.append(dst_attribute.span);
         attributes.attributes.append(std::move(dst_attribute));
 
         return true;
       });
 }
 
-static Curves *create_result_curves(const bke::CurvesGeometry &src_curves,
-                                    const IndexMask selection,
-                                    const CurveType dst_type)
-{
-  Curves *dst_curves_id = bke::curves_new_nomain(0, src_curves.curves_num());
-  bke::CurvesGeometry &dst_curves = bke::CurvesGeometry::wrap(dst_curves_id->geometry);
-  CurveComponent dst_component;
-  dst_component.replace(dst_curves_id, GeometryOwnershipType::Editable);
-  /* Directly copy curve attributes, since they stay the same (except for curve types). */
-  CustomData_copy(&src_curves.curve_data,
-                  &dst_curves.curve_data,
-                  CD_MASK_ALL,
-                  CD_DUPLICATE,
-                  src_curves.curves_num());
-
-  dst_curves.fill_curve_types(selection, dst_type);
-
-  return dst_curves_id;
-}
-
-static Curves *convert_curves_to_bezier(const CurveComponent &src_component,
-                                        const bke::CurvesGeometry &src_curves,
-                                        const IndexMask selection)
+static bke::CurvesGeometry convert_curves_to_bezier(const bke::CurvesGeometry &src_curves,
+                                                    const IndexMask selection)
 {
   const VArray<int8_t> src_knot_modes = src_curves.nurbs_knots_modes();
   const VArray<int8_t> src_types = src_curves.curve_types();
   const VArray<bool> src_cyclic = src_curves.cyclic();
   const Span<float3> src_positions = src_curves.positions();
 
-  Curves *dst_curves_id = create_result_curves(src_curves, selection, CURVE_TYPE_BEZIER);
-  bke::CurvesGeometry &dst_curves = bke::CurvesGeometry::wrap(dst_curves_id->geometry);
-  CurveComponent dst_component;
-  dst_component.replace(dst_curves_id, GeometryOwnershipType::Editable);
+  bke::CurvesGeometry dst_curves = bke::curves::copy_only_curve_domain(src_curves);
+  dst_curves.fill_curve_types(selection, CURVE_TYPE_BEZIER);
 
   MutableSpan<int> dst_offsets = dst_curves.offsets_for_write();
   retrieve_curve_sizes(src_curves, dst_curves.offsets_for_write());
@@ -367,8 +344,11 @@ static Curves *convert_curves_to_bezier(const CurveComponent &src_component,
   bke::curves::accumulate_counts_to_offsets(dst_offsets);
   dst_curves.resize(dst_offsets.last(), dst_curves.curves_num());
 
+  const bke::AttributeAccessor src_attributes = src_curves.attributes();
+  bke::MutableAttributeAccessor dst_attributes = dst_curves.attributes_for_write();
+
   GenericAttributes attributes;
-  retrieve_generic_point_attributes(src_component, dst_component, attributes);
+  retrieve_generic_point_attributes(src_attributes, dst_attributes, attributes);
 
   MutableSpan<float3> dst_positions = dst_curves.positions_for_write();
   MutableSpan<float3> dst_handles_l = dst_curves.handle_positions_left_for_write();
@@ -494,25 +474,22 @@ static Curves *convert_curves_to_bezier(const CurveComponent &src_component,
         src_curves, dst_curves, unselected_ranges, attributes.src[i], attributes.dst[i]);
   }
 
-  for (bke::OutputAttribute &attribute : attributes.attributes) {
-    attribute.save();
+  for (bke::GSpanAttributeWriter &attribute : attributes.attributes) {
+    attribute.finish();
   }
 
-  return dst_curves_id;
+  return dst_curves;
 }
 
-static Curves *convert_curves_to_nurbs(const CurveComponent &src_component,
-                                       const bke::CurvesGeometry &src_curves,
-                                       const IndexMask selection)
+static bke::CurvesGeometry convert_curves_to_nurbs(const bke::CurvesGeometry &src_curves,
+                                                   const IndexMask selection)
 {
   const VArray<int8_t> src_types = src_curves.curve_types();
   const VArray<bool> src_cyclic = src_curves.cyclic();
   const Span<float3> src_positions = src_curves.positions();
 
-  Curves *dst_curves_id = create_result_curves(src_curves, selection, CURVE_TYPE_NURBS);
-  bke::CurvesGeometry &dst_curves = bke::CurvesGeometry::wrap(dst_curves_id->geometry);
-  CurveComponent dst_component;
-  dst_component.replace(dst_curves_id, GeometryOwnershipType::Editable);
+  bke::CurvesGeometry dst_curves = bke::curves::copy_only_curve_domain(src_curves);
+  dst_curves.fill_curve_types(selection, CURVE_TYPE_NURBS);
 
   MutableSpan<int> dst_offsets = dst_curves.offsets_for_write();
   retrieve_curve_sizes(src_curves, dst_curves.offsets_for_write());
@@ -524,8 +501,11 @@ static Curves *convert_curves_to_nurbs(const CurveComponent &src_component,
   bke::curves::accumulate_counts_to_offsets(dst_offsets);
   dst_curves.resize(dst_offsets.last(), dst_curves.curves_num());
 
+  const bke::AttributeAccessor src_attributes = src_curves.attributes();
+  bke::MutableAttributeAccessor dst_attributes = dst_curves.attributes_for_write();
+
   GenericAttributes attributes;
-  retrieve_generic_point_attributes(src_component, dst_component, attributes);
+  retrieve_generic_point_attributes(src_attributes, dst_attributes, attributes);
 
   MutableSpan<float3> dst_positions = dst_curves.positions_for_write();
 
@@ -659,11 +639,11 @@ static Curves *convert_curves_to_nurbs(const CurveComponent &src_component,
         src_curves, dst_curves, unselected_ranges, attributes.src[i], attributes.dst[i]);
   }
 
-  for (bke::OutputAttribute &attribute : attributes.attributes) {
-    attribute.save();
+  for (bke::GSpanAttributeWriter &attribute : attributes.attributes) {
+    attribute.finish();
   }
 
-  return dst_curves_id;
+  return dst_curves;
 }
 
 static bke::CurvesGeometry convert_curves_trivial(const bke::CurvesGeometry &src_curves,
@@ -676,33 +656,31 @@ static bke::CurvesGeometry convert_curves_trivial(const bke::CurvesGeometry &src
   return dst_curves;
 }
 
-Curves *convert_curves(const CurveComponent &src_component,
-                       const bke::CurvesGeometry &src_curves,
-                       const IndexMask selection,
-                       const CurveType dst_type)
+bke::CurvesGeometry convert_curves(const bke::CurvesGeometry &src_curves,
+                                   const IndexMask selection,
+                                   const CurveType dst_type)
 {
   switch (dst_type) {
     case CURVE_TYPE_CATMULL_ROM:
     case CURVE_TYPE_POLY:
-      return bke::curves_new_nomain(convert_curves_trivial(src_curves, selection, dst_type));
+      return convert_curves_trivial(src_curves, selection, dst_type);
     case CURVE_TYPE_BEZIER:
-      return convert_curves_to_bezier(src_component, src_curves, selection);
+      return convert_curves_to_bezier(src_curves, selection);
     case CURVE_TYPE_NURBS:
-      return convert_curves_to_nurbs(src_component, src_curves, selection);
+      return convert_curves_to_nurbs(src_curves, selection);
   }
   BLI_assert_unreachable();
-  return nullptr;
+  return {};
 }
 
 bool try_curves_conversion_in_place(const IndexMask selection,
                                     const CurveType dst_type,
-                                    FunctionRef<Curves &()> get_writable_curves_fn)
+                                    FunctionRef<bke::CurvesGeometry &()> get_writable_curves_fn)
 {
   if (conversion_can_change_point_num(dst_type)) {
     return false;
   }
-  Curves &curves_id = get_writable_curves_fn();
-  bke::CurvesGeometry &curves = bke::CurvesGeometry::wrap(curves_id.geometry);
+  bke::CurvesGeometry &curves = get_writable_curves_fn();
   curves.fill_curve_types(selection, dst_type);
   curves.remove_attributes_based_on_types();
   return true;

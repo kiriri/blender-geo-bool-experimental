@@ -375,7 +375,6 @@ set(GLSL_SRC
   engines/eevee_next/shaders/eevee_surf_lib.glsl
   engines/eevee_next/shaders/eevee_surf_world_frag.glsl
   engines/eevee_next/shaders/eevee_velocity_lib.glsl
-  engines/eevee_next/shaders/eevee_velocity_resolve_comp.glsl
 
   engines/eevee_next/eevee_defines.hh
   engines/eevee_next/eevee_shader_shared.hh
@@ -461,6 +460,7 @@ set(GLSL_SRC
 
   engines/basic/shaders/basic_conservative_depth_geom.glsl
   engines/basic/shaders/basic_depth_vert.glsl
+  engines/basic/shaders/basic_depth_curves_vert.glsl
   engines/basic/shaders/basic_depth_pointcloud_vert.glsl
   engines/basic/shaders/basic_depth_frag.glsl
 
@@ -538,6 +538,7 @@ set(GLSL_SRC
   engines/overlay/shaders/overlay_motion_path_line_vert.glsl
   engines/overlay/shaders/overlay_motion_path_point_vert.glsl
   engines/overlay/shaders/overlay_outline_detect_frag.glsl
+  engines/overlay/shaders/overlay_outline_prepass_curves_vert.glsl
   engines/overlay/shaders/overlay_outline_prepass_frag.glsl
   engines/overlay/shaders/overlay_outline_prepass_geom.glsl
   engines/overlay/shaders/overlay_outline_prepass_gpencil_frag.glsl

@@ -94,6 +94,47 @@ VectorSet<Curves *> get_unique_editable_curves(const bContext &C)
   return unique_curves;
 }
 
+static bool curves_poll_impl(bContext *C, const bool check_editable, const bool check_surface)
+{
+  Object *object = CTX_data_active_object(C);
+  if (object == nullptr || object->type != OB_CURVES) {
+    return false;
+  }
+  if (check_editable) {
+    if (!ED_operator_object_active_editable_ex(C, object)) {
+      return false;
+    }
+  }
+  if (check_surface) {
+    Curves &curves = *static_cast<Curves *>(object->data);
+    if (curves.surface == nullptr || curves.surface->type != OB_MESH) {
+      CTX_wm_operator_poll_msg_set(C, "Curves must have a mesh surface object set");
+      return false;
+    }
+  }
+  return true;
+}
+
+bool editable_curves_with_surface_poll(bContext *C)
+{
+  return curves_poll_impl(C, true, true);
+}
+
+bool curves_with_surface_poll(bContext *C)
+{
+  return curves_poll_impl(C, false, true);
+}
+
+bool editable_curves_poll(bContext *C)
+{
+  return curves_poll_impl(C, false, false);
+}
+
+bool curves_poll(bContext *C)
+{
+  return curves_poll_impl(C, false, false);
+}
+
 using bke::CurvesGeometry;
 
 namespace convert_to_particle_system {
@@ -337,16 +378,6 @@ static int curves_convert_to_particle_system_exec(bContext *C, wmOperator *op)
   return OPERATOR_FINISHED;
 }
 
-static bool curves_convert_to_particle_system_poll(bContext *C)
-{
-  Object *ob = CTX_data_active_object(C);
-  if (ob == nullptr || ob->type != OB_CURVES) {
-    return false;
-  }
-  Curves &curves = *static_cast<Curves *>(ob->data);
-  return curves.surface != nullptr;
-}
-
 }  // namespace convert_to_particle_system
 
 static void CURVES_OT_convert_to_particle_system(wmOperatorType *ot)
@@ -355,7 +386,7 @@ static void CURVES_OT_convert_to_particle_system(wmOperatorType *ot)
   ot->idname = "CURVES_OT_convert_to_particle_system";
   ot->description = "Add a new or update an existing hair particle system on the surface object";
 
-  ot->poll = convert_to_particle_system::curves_convert_to_particle_system_poll;
+  ot->poll = curves_with_surface_poll;
   ot->exec = convert_to_particle_system::curves_convert_to_particle_system_exec;
 
   ot->flag = OPTYPE_UNDO | OPTYPE_REGISTER;
@@ -465,7 +496,6 @@ static int curves_convert_from_particle_system_exec(bContext *C, wmOperator *UNU
   }
 
   Object *ob_new = BKE_object_add(&bmain, &view_layer, OB_CURVES, psys_eval->name);
-  ob_new->dtx |= OB_DRAWBOUNDOX; /* TODO: Remove once there is actual drawing. */
   Curves *curves_id = static_cast<Curves *>(ob_new->data);
   BKE_object_apply_mat4(ob_new, ob_from_orig->obmat, true, false);
   bke::CurvesGeometry::wrap(curves_id->geometry) = particles_to_curves(*ob_from_eval, *psys_eval);
@@ -502,22 +532,6 @@ enum class AttachMode {
   Deform,
 };
 
-static bool snap_curves_to_surface_poll(bContext *C)
-{
-  Object *ob = CTX_data_active_object(C);
-  if (ob == nullptr || ob->type != OB_CURVES) {
-    return false;
-  }
-  if (!ED_operator_object_active_editable_ex(C, ob)) {
-    return false;
-  }
-  Curves &curves = *static_cast<Curves *>(ob->data);
-  if (curves.surface == nullptr) {
-    return false;
-  }
-  return true;
-}
-
 static void snap_curves_to_surface_exec_object(Object &curves_ob,
                                                const Object &surface_ob,
                                                const AttachMode attach_mode,
@@ -529,14 +543,11 @@ static void snap_curves_to_surface_exec_object(Object &curves_ob,
 
   Mesh &surface_mesh = *static_cast<Mesh *>(surface_ob.data);
 
-  MeshComponent surface_mesh_component;
-  surface_mesh_component.replace(&surface_mesh, GeometryOwnershipType::ReadOnly);
-
   VArraySpan<float2> surface_uv_map;
   if (curves_id.surface_uv_map != nullptr) {
-    surface_uv_map = surface_mesh_component
-                         .attribute_try_get_for_read(
-                             curves_id.surface_uv_map, ATTR_DOMAIN_CORNER, CD_PROP_FLOAT2)
+    const bke::AttributeAccessor surface_attributes = bke::mesh_attributes(surface_mesh);
+    surface_uv_map = surface_attributes
+                         .lookup(curves_id.surface_uv_map, ATTR_DOMAIN_CORNER, CD_PROP_FLOAT2)
                          .typed<float2>();
   }
 
@@ -682,7 +693,8 @@ static int snap_curves_to_surface_exec(bContext *C, wmOperator *op)
     BKE_report(op->reports, RPT_INFO, "Could not snap some curves to the surface");
   }
 
-  WM_main_add_notifier(NC_OBJECT | ND_DRAW, nullptr);
+  /* Refresh the entire window to also clear eventual modifier and nodes editor warnings.*/
+  WM_event_add_notifier(C, NC_WINDOW, nullptr);
 
   return OPERATOR_FINISHED;
 }
@@ -697,7 +709,7 @@ static void CURVES_OT_snap_curves_to_surface(wmOperatorType *ot)
   ot->idname = "CURVES_OT_snap_curves_to_surface";
   ot->description = "Move curves so that the first point is exactly on the surface mesh";
 
-  ot->poll = snap_curves_to_surface_poll;
+  ot->poll = editable_curves_with_surface_poll;
   ot->exec = snap_curves_to_surface_exec;
 
   ot->flag = OPTYPE_UNDO | OPTYPE_REGISTER;
@@ -726,21 +738,6 @@ static void CURVES_OT_snap_curves_to_surface(wmOperatorType *ot)
                "How to find the point on the surface to attach to");
 }
 
-bool selection_operator_poll(bContext *C)
-{
-  const Object *object = CTX_data_active_object(C);
-  if (object == nullptr) {
-    return false;
-  }
-  if (object->type != OB_CURVES) {
-    return false;
-  }
-  if (!BKE_id_is_editable(CTX_data_main(C), static_cast<const ID *>(object->data))) {
-    return false;
-  }
-  return true;
-}
-
 namespace set_selection_domain {
 
 static int curves_set_selection_domain_exec(bContext *C, wmOperator *op)
@@ -756,21 +753,20 @@ static int curves_set_selection_domain_exec(bContext *C, wmOperator *op)
     curves_id->selection_domain = domain;
     curves_id->flag |= CV_SCULPT_SELECTION_ENABLED;
 
-    CurveComponent component;
-    component.replace(curves_id, GeometryOwnershipType::Editable);
     CurvesGeometry &curves = CurvesGeometry::wrap(curves_id->geometry);
+    bke::MutableAttributeAccessor attributes = curves.attributes_for_write();
 
     if (old_domain == ATTR_DOMAIN_POINT && domain == ATTR_DOMAIN_CURVE) {
       VArray<float> curve_selection = curves.adapt_domain(
           curves.selection_point_float(), ATTR_DOMAIN_POINT, ATTR_DOMAIN_CURVE);
       curve_selection.materialize(curves.selection_curve_float_for_write());
-      component.attribute_try_delete(".selection_point_float");
+      attributes.remove(".selection_point_float");
     }
     else if (old_domain == ATTR_DOMAIN_CURVE && domain == ATTR_DOMAIN_POINT) {
       VArray<float> point_selection = curves.adapt_domain(
           curves.selection_curve_float(), ATTR_DOMAIN_CURVE, ATTR_DOMAIN_POINT);
       point_selection.materialize(curves.selection_point_float_for_write());
-      component.attribute_try_delete(".selection_curve_float");
+      attributes.remove(".selection_curve_float");
     }
 
     /* Use #ID_RECALC_GEOMETRY instead of #ID_RECALC_SELECT because it is handled as a generic
@@ -795,7 +791,7 @@ static void CURVES_OT_set_selection_domain(wmOperatorType *ot)
   ot->description = "Change the mode used for selection masking in curves sculpt mode";
 
   ot->exec = set_selection_domain::curves_set_selection_domain_exec;
-  ot->poll = selection_operator_poll;
+  ot->poll = editable_curves_poll;
 
   ot->flag = OPTYPE_REGISTER | OPTYPE_UNDO;
 
@@ -831,7 +827,7 @@ static void CURVES_OT_disable_selection(wmOperatorType *ot)
   ot->description = "Disable the drawing of influence of selection in sculpt mode";
 
   ot->exec = disable_selection::curves_disable_selection_exec;
-  ot->poll = selection_operator_poll;
+  ot->poll = editable_curves_poll;
 
   ot->flag = OPTYPE_REGISTER | OPTYPE_UNDO;
 }
@@ -900,15 +896,14 @@ static int select_all_exec(bContext *C, wmOperator *op)
   }
 
   for (Curves *curves_id : unique_curves) {
+    CurvesGeometry &curves = CurvesGeometry::wrap(curves_id->geometry);
     if (action == SEL_SELECT) {
       /* As an optimization, just remove the selection attributes when everything is selected. */
-      CurveComponent component;
-      component.replace(curves_id, GeometryOwnershipType::Editable);
-      component.attribute_try_delete(".selection_point_float");
-      component.attribute_try_delete(".selection_curve_float");
+      bke::MutableAttributeAccessor attributes = curves.attributes_for_write();
+      attributes.remove(".selection_point_float");
+      attributes.remove(".selection_curve_float");
     }
     else {
-      CurvesGeometry &curves = CurvesGeometry::wrap(curves_id->geometry);
       MutableSpan<float> selection = curves_id->selection_domain == ATTR_DOMAIN_POINT ?
                                          curves.selection_point_float_for_write() :
                                          curves.selection_curve_float_for_write();
@@ -938,11 +933,93 @@ static void SCULPT_CURVES_OT_select_all(wmOperatorType *ot)
   ot->description = "(De)select all control points";
 
   ot->exec = select_all::select_all_exec;
-  ot->poll = selection_operator_poll;
+  ot->poll = editable_curves_poll;
 
   ot->flag = OPTYPE_REGISTER | OPTYPE_UNDO;
 
   WM_operator_properties_select_all(ot);
+}
+
+namespace surface_set {
+
+static bool surface_set_poll(bContext *C)
+{
+  const Object *object = CTX_data_active_object(C);
+  if (object == nullptr) {
+    return false;
+  }
+  if (object->type != OB_MESH) {
+    return false;
+  }
+  return true;
+}
+
+static int surface_set_exec(bContext *C, wmOperator *op)
+{
+  Main *bmain = CTX_data_main(C);
+  Scene *scene = CTX_data_scene(C);
+
+  Object &new_surface_ob = *CTX_data_active_object(C);
+
+  Mesh &new_surface_mesh = *static_cast<Mesh *>(new_surface_ob.data);
+  const char *new_uv_map_name = CustomData_get_active_layer_name(&new_surface_mesh.ldata,
+                                                                 CD_MLOOPUV);
+
+  CTX_DATA_BEGIN (C, Object *, selected_ob, selected_objects) {
+    if (selected_ob->type != OB_CURVES) {
+      continue;
+    }
+    Object &curves_ob = *selected_ob;
+    Curves &curves_id = *static_cast<Curves *>(curves_ob.data);
+
+    MEM_SAFE_FREE(curves_id.surface_uv_map);
+    if (new_uv_map_name != nullptr) {
+      curves_id.surface_uv_map = BLI_strdup(new_uv_map_name);
+    }
+
+    bool missing_uvs;
+    bool invalid_uvs;
+    snap_curves_to_surface::snap_curves_to_surface_exec_object(
+        curves_ob,
+        new_surface_ob,
+        snap_curves_to_surface::AttachMode::Nearest,
+        &invalid_uvs,
+        &missing_uvs);
+
+    /* Add deformation modifier if necessary. */
+    blender::ed::curves::ensure_surface_deformation_node_exists(*C, curves_ob);
+
+    curves_id.surface = &new_surface_ob;
+    ED_object_parent_set(
+        op->reports, C, scene, &curves_ob, &new_surface_ob, PAR_OBJECT, false, true, nullptr);
+
+    DEG_id_tag_update(&curves_ob.id, ID_RECALC_TRANSFORM);
+    WM_event_add_notifier(C, NC_GEOM | ND_DATA, &curves_id);
+
+    /* Required for deformation. */
+    new_surface_ob.modifier_flag |= OB_MODIFIER_FLAG_ADD_REST_POSITION;
+    DEG_id_tag_update(&new_surface_ob.id, ID_RECALC_GEOMETRY);
+  }
+  CTX_DATA_END;
+
+  DEG_relations_tag_update(bmain);
+
+  return OPERATOR_FINISHED;
+}
+
+}  // namespace surface_set
+
+static void CURVES_OT_surface_set(wmOperatorType *ot)
+{
+  ot->name = "Set Curves Surface Object";
+  ot->idname = __func__;
+  ot->description =
+      "Use the active object as surface for selected curves objects and set it as the parent";
+
+  ot->exec = surface_set::surface_set_exec;
+  ot->poll = surface_set::surface_set_poll;
+
+  ot->flag = OPTYPE_REGISTER | OPTYPE_UNDO;
 }
 
 }  // namespace blender::ed::curves
@@ -956,4 +1033,5 @@ void ED_operatortypes_curves()
   WM_operatortype_append(CURVES_OT_set_selection_domain);
   WM_operatortype_append(SCULPT_CURVES_OT_select_all);
   WM_operatortype_append(CURVES_OT_disable_selection);
+  WM_operatortype_append(CURVES_OT_surface_set);
 }
