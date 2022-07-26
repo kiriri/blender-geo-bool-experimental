@@ -31,103 +31,11 @@ namespace bg = boost::geometry;
 namespace bgi = boost::geometry::index;
 
 /**
- * TODO :
- * Turn Curves into CurveHull asap.
- * Then work just with CurveHull.
- * CurveHull should never need to refer to the actual curve again after creation.
- *
- */
-
-/**
- * This file implements the Curve 2D Boolean geometry node.
- * The recurring variable v exclusively describes a [0,1] float that represents the distance along
- * a curve or a line. All other names should be self explanatory.
- *
- *
- * EXPLANATION :
- *
- * BOOLEAN ALGORITHM :
- *
- * (insert video url here)
- * In this video I'm going to explain to you how the Boolean Curve Algorithm I wrote for blender
- * works.
- * ( Show Simple overlapping circles, with A and B inside )
- * For the time being, let's assume all curves go clockwise, curves don't intersect themselves, and
- * all curves are closed. And let's try doing a UNION operation first.
- * Each curve exists as a doubly-linked-list of points. Meaning
- * we can iterate them in linear time, insert and remove in constant time, and find in linear time.
- * Let's start by calculating all intersection points and inserting them into both curve A and
- * curve B. Meaning each intersection point generates 2 new curve points, one on each curve, but
- * each at the same position. These intersection points will point to one another, turning the
- * doubly-linked-list of each curve into a partial tripply-linked-mesh of all intersecting curves.
- * ( Show Intersection points )
- * Assuming we found intersection points, let's take the first point on curve A.
- * There are 2 cases here.
- * 1) The point lies outside curve B.
- * 2) The point lies inside curve B.
- * We then trace along the curve until we find a point that is an intersection point.
- * Now let's assume we're doing a UNION operation. In that case, any point on A past the
- * intersection point will be outside of the other shape if it was inside before, or inside if it
- * was outside before. Since UNION just means we want our final shape to take up the maximum area
- * it can, we want to follow whatever curve is outside. In this case, A was inside before, so we
- * discard anything we traced before, and continue tracing on curve A, because A is now OUTSIDE. We
- * then reach the second intersection point. At this point curve A was outside before, meaning
- * after this point it will be inside. So we switch to curve B, which must now be outside. We
- * continue this until we reach a point we've already processed. We then repeat the algorithm with
- * any curve points we did not process.
- *
- * Things go very similarly for the other 2 operations; INTERSECTION and DIFFERENCE.
- * For DIFFERENCE, we just need to flip the direction of our subtracting curve. This means that
- * when we flip from curve A to curve B, we move INSIDE curve A along curve B instead of OUTSIDE.
- * For INTERSECTION we just flip our "is_inside" function results, since we want to MINIMIZE area
- * now. This "is_inside" value is also great to form a mathematical proof on, but I'm not gonna go
- * into that here. I recommend just taking a piece of paper and trying this by hand. It makes
- * intuitive sense.
- *
- * From the DIFFERENCE operation we've now learned that a subtractive shape is nothing but a union
- * with a curve that goes the opposite way it's supposed to. This is a generalizable property. We
- * know that the shape of a donut ,for example, has an inside and an outside curve. The outside
- * curve describes where the shape starts, while the inside curve describes an empty area within
- * the shape. Putting these 2 concepts together, we can process complicated shapes with multiple
- * curves by flipping the direction of inner curves. Every curve that is surrounded by an odd
- * number of curves is an inner (subtractive) curve.
- *
- *
- * 2D CONCAVE INTERSECTION
- *
- * TODO: What runtime is actually feasable here? What about prep time?
- * The goal of this algorithm is to find out if 2 concave polygons intersect.
- * The target runtime is O( (log(n) + log(m))^2 ) where n and m are the number of points in the
- * respective polygon. The target prep time is O( n * log(n) ) for each polygon. We do this by
- * first splitting the concave polygons into n convex parts. ( O(n) ) We then build a convex hull
- * binary tree. O( n * log(n) )
- *
- * Worst case : There are n/2 and m/2 convex segments that all overlap. Runtime would be O( n * m
- * ). So let's look at worst case with NO overlaps instead.
- *
- *
- * 2D CONVEX INTERSECTION
- *
- * The goal of this algorithm is to find out if 2 convex polygons intersect.
- * The target runtime is O( log(n) + log(m) ) where n and m are the number of points in the
- * respective polygon.
- *
- *
- *
- * BUGS:
- *
- * TODO:
- * Turn as many stds into blender collections as possible.
- * Move static intersection to BezierSpline
- *
- * Optimize multiple bool operations in a row via multiple operands?
- * Line Segment intersection library
- * Optional hard corners so attributes like radius stick. Or maybe an enum to define which curve
- * should provide attributes for intersection points. Conformity slider : If 1, map intersection
- * points to geometry, if 0, map to bezier curve. Interpolate between. If either of the curves self
- * intersect, show a warning.
- * Splines to bezier conversion. ( How does this work with weighted points? We need 1 for 1 bezier
- * control points, no?)
+ * - clone original data.
+ * - get curves as indices/offsets list.
+ * - calculate intersections. Use list iterator, so insert() can add it right after. Add data to
+ * end of cloned data, with full interpolation.
+ * - trace.
  */
 
 /**
@@ -164,6 +72,66 @@ template<typename T> static std::string str(T t)
 
 namespace blender::nodes {
 
+
+/**
+ * \warning Copied from subdivide_curves.cc
+ * In theory this should copy the curves, but all I get is an exception down the line.
+ */
+static Curves *create_result_curves(const bke::CurvesGeometry &src_curves)
+{
+  Curves *dst_curves_id = bke::curves_new_nomain(0, src_curves.curves_num());
+  bke::CurvesGeometry &dst_curves = bke::CurvesGeometry::wrap(dst_curves_id->geometry);
+  CurveComponent dst_component;
+  dst_component.replace(dst_curves_id, GeometryOwnershipType::Editable);
+  /* Directly copy curve attributes, since they stay the same. */
+  CustomData_copy(&src_curves.curve_data,
+                  &dst_curves.curve_data,
+                  CD_MASK_ALL,
+                  CD_DUPLICATE,
+                  src_curves.curves_num());
+  dst_curves.runtime->type_counts = src_curves.runtime->type_counts;
+
+  return dst_curves_id;
+}
+
+/**
+ * Generate one or more new curves from 2 existing sets of curves.
+ * These curves must not self intersect.
+ * The general idea is to follow one of the curves and copy the control points until an
+ * intersection is found. At which point we know the other curve is bigger, so we switch to the
+ * other one. We do this for each intersection until we reach our initial position.
+ */
+static Curves* generate_boolean_shapes(GeometrySet &primary_geometry_set,
+                                                       GeometrySet &secondary_geometry_set,
+                                                       BoolOperationType type,
+                                                       int resolution)
+{
+
+  const CurveComponent &primary_component =
+      *primary_geometry_set.get_component_for_read<CurveComponent>();
+  const Curves &_primary_curves = *primary_component.get_for_read();
+  bke::CurvesGeometry primary_curves = bke::CurvesGeometry::wrap(_primary_curves.geometry);
+  const int primary_curve_count = primary_curves.curve_num;
+
+  // const CurveComponent &secondary_component =
+  //     *secondary_geometry_set.get_component_for_read<CurveComponent>();
+  // const Curves &_secondary_curves = *secondary_component.get_for_read();
+  // bke::CurvesGeometry secondary_curves = bke::CurvesGeometry::wrap(_secondary_curves.geometry);
+  // const int secondary_curve_count = secondary_curves.curve_num;
+
+  // std::vector<int> results = {};
+
+  // // TODO : Walk along all curves in A, put the offsets in array. Then turn array into valid output
+  // for (const int i_curve : primary_curves.curves_range()) {
+  //   const IndexRange curve_index_range =  primary_curves.points_for_curve(i_curve);
+  //   for (const int i_point : curve_index_range) {
+  //     results.push_back(i_point);
+  //   }
+  // }
+
+  return create_result_curves(primary_curves);
+}
+
 /**
  * This is called whenever the node needs to update, such as when inputs change.
  */
@@ -172,10 +140,8 @@ static void geo_node_curve_bool_exec(GeoNodeExecParams params)
   SCOPED_TIMER("Curve Boolean");
 
   int resolution = params.extract_input<int>("Int. Resolution");
+
   GeometrySet geometry_set_a = params.extract_input<GeometrySet>("Base Curve");
-  // CurveComponent& curve_set_a =
-  // geometry_set_a.get_component_for_write<CurveComponent>();//bke::geometry_set_realize_instances(curve_set_a);
-  std::vector<const CurveEval *> curves_b;
 
   Vector<GeometrySet> geometry_sets = params.extract_multi_input<GeometrySet>("Curves");
 
@@ -189,16 +155,13 @@ static void geo_node_curve_bool_exec(GeoNodeExecParams params)
   const BoolOperationType data_type = static_cast<BoolOperationType>(node.custom2);
 
   int real_count = 0;
-  // Repeat the bool operation for each element in the operand `Curves` input.
+  // Repeat the bool operation for each element in the `Curves` input.
   Curves *primary_curves = geometry_set_a.get_curves_for_write();
   std::unique_ptr<Curves> result_curves;
   for (GeometrySet &set_group : geometry_sets) {
     // const CurveComponent* curve_in = set_group.get_component_for_read<CurveComponent>();
     if (set_group.has_curves()) {
-      // result_curves = generate_boolean_shapes(
-      //     primary_curves, set_group.get_curves_for_write(), data_type, resolution);
-
-      primary_curves = result_curves.get();
+      primary_curves = generate_boolean_shapes(geometry_set_a, set_group, data_type, resolution);
 
       real_count++;
     }
@@ -208,10 +171,14 @@ static void geo_node_curve_bool_exec(GeoNodeExecParams params)
     params.set_output("Curve", geometry_set_a);
   }
   else {
-    params.set_output("Curve", GeometrySet::create_with_curves(result_curves.release()));
+    params.set_output("Curve", GeometrySet::create_with_curves(primary_curves));
   }
+
 }
 
+/**
+ * Define the shape of the node, its inputs and outputs.
+ */
 static void geo_node_curve_bool_declare(NodeDeclarationBuilder &b)
 {
   b.add_input<decl::Geometry>("Base Curve");

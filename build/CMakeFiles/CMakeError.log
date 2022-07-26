@@ -1,0 +1,246 @@
+Detecting C compiler ABI info failed to compile with the following output:
+Change Dir: /home/sven/blender-git-new-new/blender/build/CMakeFiles/CMakeTmp
+
+Run Build Command(s):/usr/bin/ninja cmTC_55d89 && [1/2] Building C object CMakeFiles/cmTC_55d89.dir/CMakeCCompilerABI.c.o
+Using built-in specs.
+COLLECT_GCC=/bin/x86_64-w64-mingw32-gcc-9
+Target: x86_64-w64-mingw32
+Configured with: ../../src/configure --build=x86_64-linux-gnu --prefix=/usr --includedir='/usr/include' --mandir='/usr/share/man' --infodir='/usr/share/info' --sysconfdir=/etc --localstatedir=/var --disable-silent-rules --libdir='/usr/lib/x86_64-linux-gnu' --libexecdir='/usr/lib/x86_64-linux-gnu' --disable-maintainer-mode --disable-dependency-tracking --prefix=/usr --enable-shared --enable-static --disable-multilib --with-system-zlib --libexecdir=/usr/lib --without-included-gettext --libdir=/usr/lib --enable-libstdcxx-time=yes --with-tune=generic --with-headers=/usr/x86_64-w64-mingw32/include --enable-version-specific-runtime-libs --enable-fully-dynamic-string --enable-libgomp --enable-languages=c,c++,fortran,objc,obj-c++,ada --enable-lto --enable-threads=posix --program-suffix=-posix --program-prefix=x86_64-w64-mingw32- --target=x86_64-w64-mingw32 --with-as=/usr/bin/x86_64-w64-mingw32-as --with-ld=/usr/bin/x86_64-w64-mingw32-ld --enable-libatomic --enable-libstdcxx-filesystem-ts=yes --enable-dependency-tracking
+Thread model: posix
+gcc version 9.3-posix 20200320 (GCC) 
+COLLECT_GCC_OPTIONS='-v' '-o' 'CMakeFiles/cmTC_55d89.dir/CMakeCCompilerABI.c.o' '-c' '-mtune=generic' '-march=x86-64'
+ /usr/lib/gcc/x86_64-w64-mingw32/9.3-posix/cc1 -quiet -v -D_REENTRANT /usr/share/cmake-3.16/Modules/CMakeCCompilerABI.c -quiet -dumpbase CMakeCCompilerABI.c -mtune=generic -march=x86-64 -auxbase-strip CMakeFiles/cmTC_55d89.dir/CMakeCCompilerABI.c.o -version -o /tmp/ccSemQfA.s
+GNU C17 (GCC) version 9.3-posix 20200320 (x86_64-w64-mingw32)
+	compiled by GNU C version 9.3.0, GMP version 6.2.0, MPFR version 4.0.2, MPC version 1.1.0, isl version isl-0.22.1-GMP
+
+GGC heuristics: --param ggc-min-expand=100 --param ggc-min-heapsize=131072
+ignoring nonexistent directory "/usr/lib/gcc/x86_64-w64-mingw32/9.3-posix/../../../../x86_64-w64-mingw32/sys-include"
+#include "..." search starts here:
+#include <...> search starts here:
+ /usr/lib/gcc/x86_64-w64-mingw32/9.3-posix/include
+ /usr/lib/gcc/x86_64-w64-mingw32/9.3-posix/include-fixed
+ /usr/lib/gcc/x86_64-w64-mingw32/9.3-posix/../../../../x86_64-w64-mingw32/include
+End of search list.
+GNU C17 (GCC) version 9.3-posix 20200320 (x86_64-w64-mingw32)
+	compiled by GNU C version 9.3.0, GMP version 6.2.0, MPFR version 4.0.2, MPC version 1.1.0, isl version isl-0.22.1-GMP
+
+GGC heuristics: --param ggc-min-expand=100 --param ggc-min-heapsize=131072
+Compiler executable checksum: 110da3d152e5b38166b7dbf2153dd2aa
+COLLECT_GCC_OPTIONS='-v' '-o' 'CMakeFiles/cmTC_55d89.dir/CMakeCCompilerABI.c.o' '-c' '-mtune=generic' '-march=x86-64'
+ /usr/bin/x86_64-w64-mingw32-as -v -o CMakeFiles/cmTC_55d89.dir/CMakeCCompilerABI.c.o /tmp/ccSemQfA.s
+GNU assembler version 2.34 (x86_64-w64-mingw32) using BFD version (GNU Binutils) 2.34
+COMPILER_PATH=/usr/lib/gcc/x86_64-w64-mingw32/9.3-posix/:/usr/lib/gcc/x86_64-w64-mingw32/9.3-posix/:/usr/lib/gcc/x86_64-w64-mingw32/:/usr/lib/gcc/x86_64-w64-mingw32/9.3-posix/:/usr/lib/gcc/x86_64-w64-mingw32/:/usr/lib/gcc/x86_64-w64-mingw32/9.3-posix/../../../../x86_64-w64-mingw32/bin/
+LIBRARY_PATH=/usr/lib/gcc/x86_64-w64-mingw32/9.3-posix/:/usr/lib/gcc/x86_64-w64-mingw32/9.3-posix/../../../../x86_64-w64-mingw32/lib/
+COLLECT_GCC_OPTIONS='-v' '-o' 'CMakeFiles/cmTC_55d89.dir/CMakeCCompilerABI.c.o' '-c' '-mtune=generic' '-march=x86-64'
+[2/2] Linking C executable cmTC_55d89
+Using built-in specs.
+COLLECT_GCC=/bin/x86_64-w64-mingw32-gcc-9
+COLLECT_LTO_WRAPPER=/usr/lib/gcc/x86_64-w64-mingw32/9.3-posix/lto-wrapper
+Target: x86_64-w64-mingw32
+Configured with: ../../src/configure --build=x86_64-linux-gnu --prefix=/usr --includedir='/usr/include' --mandir='/usr/share/man' --infodir='/usr/share/info' --sysconfdir=/etc --localstatedir=/var --disable-silent-rules --libdir='/usr/lib/x86_64-linux-gnu' --libexecdir='/usr/lib/x86_64-linux-gnu' --disable-maintainer-mode --disable-dependency-tracking --prefix=/usr --enable-shared --enable-static --disable-multilib --with-system-zlib --libexecdir=/usr/lib --without-included-gettext --libdir=/usr/lib --enable-libstdcxx-time=yes --with-tune=generic --with-headers=/usr/x86_64-w64-mingw32/include --enable-version-specific-runtime-libs --enable-fully-dynamic-string --enable-libgomp --enable-languages=c,c++,fortran,objc,obj-c++,ada --enable-lto --enable-threads=posix --program-suffix=-posix --program-prefix=x86_64-w64-mingw32- --target=x86_64-w64-mingw32 --with-as=/usr/bin/x86_64-w64-mingw32-as --with-ld=/usr/bin/x86_64-w64-mingw32-ld --enable-libatomic --enable-libstdcxx-filesystem-ts=yes --enable-dependency-tracking
+Thread model: posix
+gcc version 9.3-posix 20200320 (GCC) 
+COMPILER_PATH=/usr/lib/gcc/x86_64-w64-mingw32/9.3-posix/:/usr/lib/gcc/x86_64-w64-mingw32/9.3-posix/:/usr/lib/gcc/x86_64-w64-mingw32/:/usr/lib/gcc/x86_64-w64-mingw32/9.3-posix/:/usr/lib/gcc/x86_64-w64-mingw32/:/usr/lib/gcc/x86_64-w64-mingw32/9.3-posix/../../../../x86_64-w64-mingw32/bin/
+LIBRARY_PATH=/usr/lib/gcc/x86_64-w64-mingw32/9.3-posix/:/usr/lib/gcc/x86_64-w64-mingw32/9.3-posix/../../../../x86_64-w64-mingw32/lib/
+COLLECT_GCC_OPTIONS='-v' '-o' 'cmTC_55d89.exe' '-mtune=generic' '-march=x86-64'
+ /usr/lib/gcc/x86_64-w64-mingw32/9.3-posix/collect2 -plugin /usr/lib/gcc/x86_64-w64-mingw32/9.3-posix/liblto_plugin.so -plugin-opt=/usr/lib/gcc/x86_64-w64-mingw32/9.3-posix/lto-wrapper -plugin-opt=-fresolution=/tmp/cc9ztmmR.res -plugin-opt=-pass-through=-lmingw32 -plugin-opt=-pass-through=-lgcc -plugin-opt=-pass-through=-lgcc_eh -plugin-opt=-pass-through=-lmoldname -plugin-opt=-pass-through=-lmingwex -plugin-opt=-pass-through=-lmsvcrt -plugin-opt=-pass-through=-lpthread -plugin-opt=-pass-through=-ladvapi32 -plugin-opt=-pass-through=-lshell32 -plugin-opt=-pass-through=-luser32 -plugin-opt=-pass-through=-lkernel32 -plugin-opt=-pass-through=-lmingw32 -plugin-opt=-pass-through=-lgcc -plugin-opt=-pass-through=-lgcc_eh -plugin-opt=-pass-through=-lmoldname -plugin-opt=-pass-through=-lmingwex -plugin-opt=-pass-through=-lmsvcrt -m i386pep -Bdynamic -o cmTC_55d89.exe /usr/lib/gcc/x86_64-w64-mingw32/9.3-posix/../../../../x86_64-w64-mingw32/lib/crt2.o /usr/lib/gcc/x86_64-w64-mingw32/9.3-posix/crtbegin.o -L/usr/lib/gcc/x86_64-w64-mingw32/9.3-posix -L/usr/lib/gcc/x86_64-w64-mingw32/9.3-posix/../../../../x86_64-w64-mingw32/lib CMakeFiles/cmTC_55d89.dir/CMakeCCompilerABI.c.o -lmingw32 -lgcc -lgcc_eh -lmoldname -lmingwex -lmsvcrt -lpthread -ladvapi32 -lshell32 -luser32 -lkernel32 -lmingw32 -lgcc -lgcc_eh -lmoldname -lmingwex -lmsvcrt /usr/lib/gcc/x86_64-w64-mingw32/9.3-posix/crtend.o
+COLLECT_GCC_OPTIONS='-v' '-o' 'cmTC_55d89.exe' '-mtune=generic' '-march=x86-64'
+
+
+Cannot copy output executable
+  ''
+to destination specified by COPY_FILE:
+  '/home/sven/blender-git-new-new/blender/build/CMakeFiles/3.16.3/CMakeDetermineCompilerABI_C.bin'
+Unable to find the executable at any of:
+  /home/sven/blender-git-new-new/blender/build/CMakeFiles/CMakeTmp/cmTC_55d89
+  /home/sven/blender-git-new-new/blender/build/CMakeFiles/CMakeTmp/Debug/cmTC_55d89
+  /home/sven/blender-git-new-new/blender/build/CMakeFiles/CMakeTmp/Development/cmTC_55d89
+
+
+Performing C++ SOURCE FILE Test SUPPORT_NEON_BUILD failed with the following output:
+Change Dir: /home/sven/blender-git-new-new/blender/build/CMakeFiles/CMakeTmp
+
+Run Build Command(s):/usr/bin/ninja cmTC_d1c2d && [1/2] Building CXX object CMakeFiles/cmTC_d1c2d.dir/src.cxx.o
+FAILED: CMakeFiles/cmTC_d1c2d.dir/src.cxx.o 
+/bin/c++    -DSUPPORT_NEON_BUILD -o CMakeFiles/cmTC_d1c2d.dir/src.cxx.o -c src.cxx
+src.cxx:1:10: fatal error: arm_neon.h: No such file or directory
+    1 | #include <arm_neon.h>
+      |          ^~~~~~~~~~~~
+compilation terminated.
+ninja: build stopped: subcommand failed.
+
+
+Source file was:
+#include <arm_neon.h>
+       int main() {return vaddvq_s32(vdupq_n_s32(1));}
+Performing C SOURCE FILE Test SUPPORT_SSE_BUILD failed with the following compile output:
+Change Dir: /home/sven/blender-git-new-new/blender/build/CMakeFiles/CMakeTmp
+
+Run Build Command(s):/usr/bin/ninja cmTC_ad41b && [1/2] Building C object CMakeFiles/cmTC_ad41b.dir/src.c.o
+[2/2] Linking C executable cmTC_ad41b
+
+
+...and run output:
+
+Return value: 
+Source file was:
+
+      #include <xmmintrin.h>
+      int main(void) { __m128 v = _mm_setzero_ps(); return 0; }
+Performing C SOURCE FILE Test SUPPORT_SSE2_BUILD failed with the following compile output:
+Change Dir: /home/sven/blender-git-new-new/blender/build/CMakeFiles/CMakeTmp
+
+Run Build Command(s):/usr/bin/ninja cmTC_70c73 && [1/2] Building C object CMakeFiles/cmTC_70c73.dir/src.c.o
+[2/2] Linking C executable cmTC_70c73
+
+
+...and run output:
+
+Return value: 
+Source file was:
+
+      #include <emmintrin.h>
+      int main(void) { __m128d v = _mm_setzero_pd(); return 0; }
+Determining if the function XOpenDisplay exists in the /usr/lib/x86_64-linux-gnu/libX11.so;/usr/lib/x86_64-linux-gnu/libXext.so failed with the following output:
+Change Dir: /home/sven/blender-git-new-new/blender/build/CMakeFiles/CMakeTmp
+
+Run Build Command(s):/usr/bin/ninja cmTC_e6e25 && [1/2] Building C object CMakeFiles/cmTC_e6e25.dir/CheckFunctionExists.c.o
+[2/2] Linking C executable cmTC_e6e25
+FAILED: cmTC_e6e25 
+: && /bin/x86_64-w64-mingw32-gcc-9 -DCHECK_FUNCTION_EXISTS=XOpenDisplay  -static-libstdc++ CMakeFiles/cmTC_e6e25.dir/CheckFunctionExists.c.o  -o cmTC_e6e25 -L/usr/lib/x86_64-linux-gnu -Wl,-rpath,/usr/lib/x86_64-linux-gnu  /usr/lib/x86_64-linux-gnu/libX11.so  /usr/lib/x86_64-linux-gnu/libXext.so && :
+/usr/bin/x86_64-w64-mingw32-ld: /usr/lib/x86_64-linux-gnu/libX11.so: error adding symbols: file in wrong format
+collect2: error: ld returned 1 exit status
+ninja: build stopped: subcommand failed.
+
+
+
+Determining if the function dnet_ntoa exists in the dnet failed with the following output:
+Change Dir: /home/sven/blender-git-new-new/blender/build/CMakeFiles/CMakeTmp
+
+Run Build Command(s):/usr/bin/ninja cmTC_3ef93 && [1/2] Building C object CMakeFiles/cmTC_3ef93.dir/CheckFunctionExists.c.o
+[2/2] Linking C executable cmTC_3ef93
+FAILED: cmTC_3ef93 
+: && /bin/x86_64-w64-mingw32-gcc-9 -DCHECK_FUNCTION_EXISTS=dnet_ntoa  -static-libstdc++ CMakeFiles/cmTC_3ef93.dir/CheckFunctionExists.c.o  -o cmTC_3ef93  -ldnet && :
+/usr/bin/x86_64-w64-mingw32-ld: cannot find -ldnet
+collect2: error: ld returned 1 exit status
+ninja: build stopped: subcommand failed.
+
+
+
+Determining if the function dnet_ntoa exists in the dnet_stub failed with the following output:
+Change Dir: /home/sven/blender-git-new-new/blender/build/CMakeFiles/CMakeTmp
+
+Run Build Command(s):/usr/bin/ninja cmTC_d0d2a && [1/2] Building C object CMakeFiles/cmTC_d0d2a.dir/CheckFunctionExists.c.o
+[2/2] Linking C executable cmTC_d0d2a
+FAILED: cmTC_d0d2a 
+: && /bin/x86_64-w64-mingw32-gcc-9 -DCHECK_FUNCTION_EXISTS=dnet_ntoa  -static-libstdc++ CMakeFiles/cmTC_d0d2a.dir/CheckFunctionExists.c.o  -o cmTC_d0d2a  -ldnet_stub && :
+/usr/bin/x86_64-w64-mingw32-ld: cannot find -ldnet_stub
+collect2: error: ld returned 1 exit status
+ninja: build stopped: subcommand failed.
+
+
+
+Determining if the function gethostbyname exists failed with the following output:
+Change Dir: /home/sven/blender-git-new-new/blender/build/CMakeFiles/CMakeTmp
+
+Run Build Command(s):/usr/bin/ninja cmTC_88ef6 && [1/2] Building C object CMakeFiles/cmTC_88ef6.dir/CheckFunctionExists.c.o
+[2/2] Linking C executable cmTC_88ef6
+FAILED: cmTC_88ef6 
+: && /bin/x86_64-w64-mingw32-gcc-9 -DCHECK_FUNCTION_EXISTS=gethostbyname  -static-libstdc++ CMakeFiles/cmTC_88ef6.dir/CheckFunctionExists.c.o  -o cmTC_88ef6   && :
+/usr/bin/x86_64-w64-mingw32-ld: CMakeFiles/cmTC_88ef6.dir/CheckFunctionExists.c.o:CheckFunctionExists.c:(.text+0x15): undefined reference to `gethostbyname'
+collect2: error: ld returned 1 exit status
+ninja: build stopped: subcommand failed.
+
+
+
+Determining if the function gethostbyname exists in the nsl failed with the following output:
+Change Dir: /home/sven/blender-git-new-new/blender/build/CMakeFiles/CMakeTmp
+
+Run Build Command(s):/usr/bin/ninja cmTC_760b4 && [1/2] Building C object CMakeFiles/cmTC_760b4.dir/CheckFunctionExists.c.o
+[2/2] Linking C executable cmTC_760b4
+FAILED: cmTC_760b4 
+: && /bin/x86_64-w64-mingw32-gcc-9 -DCHECK_FUNCTION_EXISTS=gethostbyname  -static-libstdc++ CMakeFiles/cmTC_760b4.dir/CheckFunctionExists.c.o  -o cmTC_760b4  -lnsl && :
+/usr/bin/x86_64-w64-mingw32-ld: cannot find -lnsl
+collect2: error: ld returned 1 exit status
+ninja: build stopped: subcommand failed.
+
+
+
+Determining if the function gethostbyname exists in the bsd failed with the following output:
+Change Dir: /home/sven/blender-git-new-new/blender/build/CMakeFiles/CMakeTmp
+
+Run Build Command(s):/usr/bin/ninja cmTC_c638a && [1/2] Building C object CMakeFiles/cmTC_c638a.dir/CheckFunctionExists.c.o
+[2/2] Linking C executable cmTC_c638a
+FAILED: cmTC_c638a 
+: && /bin/x86_64-w64-mingw32-gcc-9 -DCHECK_FUNCTION_EXISTS=gethostbyname  -static-libstdc++ CMakeFiles/cmTC_c638a.dir/CheckFunctionExists.c.o  -o cmTC_c638a  -lbsd && :
+/usr/bin/x86_64-w64-mingw32-ld: cannot find -lbsd
+collect2: error: ld returned 1 exit status
+ninja: build stopped: subcommand failed.
+
+
+
+Determining if the function connect exists failed with the following output:
+Change Dir: /home/sven/blender-git-new-new/blender/build/CMakeFiles/CMakeTmp
+
+Run Build Command(s):/usr/bin/ninja cmTC_1c899 && [1/2] Building C object CMakeFiles/cmTC_1c899.dir/CheckFunctionExists.c.o
+[2/2] Linking C executable cmTC_1c899
+FAILED: cmTC_1c899 
+: && /bin/x86_64-w64-mingw32-gcc-9 -DCHECK_FUNCTION_EXISTS=connect  -static-libstdc++ CMakeFiles/cmTC_1c899.dir/CheckFunctionExists.c.o  -o cmTC_1c899   && :
+/usr/bin/x86_64-w64-mingw32-ld: CMakeFiles/cmTC_1c899.dir/CheckFunctionExists.c.o:CheckFunctionExists.c:(.text+0x15): undefined reference to `connect'
+collect2: error: ld returned 1 exit status
+ninja: build stopped: subcommand failed.
+
+
+
+Determining if the function connect exists in the socket failed with the following output:
+Change Dir: /home/sven/blender-git-new-new/blender/build/CMakeFiles/CMakeTmp
+
+Run Build Command(s):/usr/bin/ninja cmTC_191b9 && [1/2] Building C object CMakeFiles/cmTC_191b9.dir/CheckFunctionExists.c.o
+[2/2] Linking C executable cmTC_191b9
+FAILED: cmTC_191b9 
+: && /bin/x86_64-w64-mingw32-gcc-9 -DCHECK_FUNCTION_EXISTS=connect  -static-libstdc++ CMakeFiles/cmTC_191b9.dir/CheckFunctionExists.c.o  -o cmTC_191b9  -lsocket && :
+/usr/bin/x86_64-w64-mingw32-ld: cannot find -lsocket
+collect2: error: ld returned 1 exit status
+ninja: build stopped: subcommand failed.
+
+
+
+Determining if the function shmat exists failed with the following output:
+Change Dir: /home/sven/blender-git-new-new/blender/build/CMakeFiles/CMakeTmp
+
+Run Build Command(s):/usr/bin/ninja cmTC_aa6d5 && [1/2] Building C object CMakeFiles/cmTC_aa6d5.dir/CheckFunctionExists.c.o
+[2/2] Linking C executable cmTC_aa6d5
+FAILED: cmTC_aa6d5 
+: && /bin/x86_64-w64-mingw32-gcc-9 -DCHECK_FUNCTION_EXISTS=shmat  -static-libstdc++ CMakeFiles/cmTC_aa6d5.dir/CheckFunctionExists.c.o  -o cmTC_aa6d5   && :
+/usr/bin/x86_64-w64-mingw32-ld: CMakeFiles/cmTC_aa6d5.dir/CheckFunctionExists.c.o:CheckFunctionExists.c:(.text+0x15): undefined reference to `shmat'
+collect2: error: ld returned 1 exit status
+ninja: build stopped: subcommand failed.
+
+
+
+Determining if the function shmat exists in the ipc failed with the following output:
+Change Dir: /home/sven/blender-git-new-new/blender/build/CMakeFiles/CMakeTmp
+
+Run Build Command(s):/usr/bin/ninja cmTC_523ce && [1/2] Building C object CMakeFiles/cmTC_523ce.dir/CheckFunctionExists.c.o
+[2/2] Linking C executable cmTC_523ce
+FAILED: cmTC_523ce 
+: && /bin/x86_64-w64-mingw32-gcc-9 -DCHECK_FUNCTION_EXISTS=shmat  -static-libstdc++ CMakeFiles/cmTC_523ce.dir/CheckFunctionExists.c.o  -o cmTC_523ce  -lipc && :
+/usr/bin/x86_64-w64-mingw32-ld: cannot find -lipc
+collect2: error: ld returned 1 exit status
+ninja: build stopped: subcommand failed.
+
+
+
+Determining if the function IceConnectionNumber exists in the ICE failed with the following output:
+Change Dir: /home/sven/blender-git-new-new/blender/build/CMakeFiles/CMakeTmp
+
+Run Build Command(s):/usr/bin/ninja cmTC_42642 && [1/2] Building C object CMakeFiles/cmTC_42642.dir/CheckFunctionExists.c.o
+[2/2] Linking C executable cmTC_42642
+FAILED: cmTC_42642 
+: && /bin/x86_64-w64-mingw32-gcc-9 -DCHECK_FUNCTION_EXISTS=IceConnectionNumber  -static-libstdc++ CMakeFiles/cmTC_42642.dir/CheckFunctionExists.c.o  -o cmTC_42642 -L/usr/lib/x86_64-linux-gnu -Wl,-rpath,/usr/lib/x86_64-linux-gnu  -lICE && :
+/usr/bin/x86_64-w64-mingw32-ld: CMakeFiles/cmTC_42642.dir/CheckFunctionExists.c.o:CheckFunctionExists.c:(.text+0x15): undefined reference to `IceConnectionNumber'
+collect2: error: ld returned 1 exit status
+ninja: build stopped: subcommand failed.
+
+
+
